@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Snake avec Javascript</title>
+    <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+    <header>
+        <h1>Snake</h1>
+    </header>
+
+    <section>
+        <p>Score : <span id="score">0</span> pomme(s)</p>
+        <input type="button" id="start" value="Start"/>
+        <input type="button" id="reset" value="Reset"/>
+        <canvas id="game" width="400px" height="400px">Votre navigateur ne supporte pas Canvas</canvas>
+    </section>
+
+    <footer>
+        <img src="images/js.png" title:"JavaScript" />
+        Loose Cannon
+    </footer>
+
+    <script>
+        var canvas = document.querySelector("#game");
+        var ctx = canvas.getContext('2d');
+
+        var X = canvas.width;
+        var Y = canvas.height;
+
+        var start=document.getElementById("start");
+        var reset=document.getElementById("reset");
+
+        // Interval d'animation
+        var animation = 169;
+
+        // Compteur de passage dans la boucle d'animation
+        var compteur = 0;
+
+        //Grille de jeu
+        var scl;
+
+        //Serpent
+        var snakeWidth;
+        var snakeHeight;
+        var snakeX, snakeY;
+        var snakeDX, snakeDY;
+
+        // Queue du Serpent
+        function SnakePart(x,y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+
+        var total;
+        var isDead = false;
+
+        //Bouffe
+        var foodWidth, foodHeight;
+        var foodX, foodY;
+
+        // Score
+        var score = document.getElementById("score");
+        var points;
+
+        init();
+        drawFood();
+        drawSnake();
+        eatFood();
+        biteTail();
+
+        document.getElementById("start").addEventListener('click',function()
+        {
+            
+            //Argh, animations...
+            var boucle = setInterval(jeuSnake,animation);
+
+            //Déplacement du serpent
+
+            document.addEventListener('keydown',function(e)
+            {
+                // vers la gauche
+                if(e.keyCode === 37 && snakeDX != scl)
+                {
+                    snakeDX = -scl;
+                    snakeDY = 0;
+                }
+                // vers la droite
+                if(e.keyCode === 39 && snakeDX != -scl)
+                {
+                    snakeDX = scl;
+                    snakeDY = 0;
+                }
+                // vers le haut
+                if(e.keyCode === 38 && snakeDY != scl)
+                {
+                    snakeDX = 0
+                    snakeDY = -scl;
+                }
+                // vers le haut
+                if(e.keyCode === 40 && snakeDY != -scl)
+                {
+                    snakeDX = 0;
+                    snakeDY = scl;
+                }
+            });
+
+            function jeuSnake()
+            {
+                compteur ++;
+
+                ctx.clearRect(0,0,X,Y);
+
+                if (isDead)
+                {
+                    clearInterval(boucle);
+                    theEnd();
+                }
+
+                drawFood();
+                drawSnake();
+                eatFood();
+                biteTail();
+
+                // TO DO : Accélération au bout de 100 points
+                
+                // Déplacement et dessin de la queue
+
+                for (var i = 0; i < tail.length-1; i++)
+                {
+                    tail[i] = tail[i+1];
+                }
+
+                tail[total-1] = new SnakePart(snakeX,snakeY);
+
+                // Incrémentation de la position du serpent :
+                if(snakeX > -scl && snakeY > -scl && snakeX < X && snakeY < Y)
+                {
+                    snakeX += snakeDX;
+                    snakeY += snakeDY;
+                }
+                else if (snakeX == -scl)
+                {
+                    snakeX = X - scl;
+                    snakeY += snakeDY;
+                }
+                else if (snakeY == -scl)
+                {
+                    snakeX += snakeDX;
+                    snakeY = Y -scl;
+                }
+                else if (snakeX == X)
+                {
+                    snakeX = 0;
+                    snakeY += snakeDY;
+                }
+                else if (snakeY == Y)
+                {
+                    snakeX += snakeDX;
+                    snakeY = 0;
+                }
+
+                console.log(compteur);
+            }
+        });
+
+        function init()
+        {
+            scl=X/20;
+
+            // Le serpent
+            snakeWidth=scl;
+            snakeHeight=scl;
+            snakeX = 0;
+            snakeY = Y/2;
+            snakeDX = scl;
+            snakeDY = 0;
+
+            // La queue du serpent 
+            tail = [];
+            total = 4;
+            if (total>0)
+            {
+                // Trouver un truc plus élégant pour tail[i].y
+                tail[0] = new SnakePart((snakeX-scl), snakeY);
+
+                for (var i = 1; i < total; i++)
+                {
+                    tail[i] = new SnakePart((tail[i-1].x-scl), snakeY);
+                }
+            }
+        
+            foodWidth=scl;
+            foodHeight=scl;
+            foodX=Math.floor(Math.random()*(X/scl))*scl;
+            foodY=Math.floor(Math.random()*(Y/scl))*scl;
+            
+            points=0;
+            score.innerHTML = points;
+        }
+
+        function drawSnake()
+        {
+            ctx.beginPath();
+            ctx.fillStyle = "#3ed857";
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "dimgray";
+
+            for (var i = 0; i < total; i++)
+            {
+                ctx.rect(tail[i].x,tail[i].y,scl,scl);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            ctx.rect(snakeX,snakeY,snakeWidth,snakeHeight);
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        function eatFood()
+        {
+            if ((snakeX == foodX) && (snakeY == foodY ) )
+            {
+                foodX=Math.floor(Math.random()*(X/scl))*scl;
+                foodY=Math.floor(Math.random()*(Y/scl))*scl;
+                drawFood();
+
+                total++;
+
+                points++;
+                score.innerHTML = points;
+
+                // TODO : faire une accélération toutes les 10 pommes
+                if (points%100 == 0)
+                {
+                    console.log('SPEED UP');
+                }
+            }
+        }
+
+        function biteTail()
+        {
+            for (var i = 0 ; i < tail.length ; i++)
+            {
+                var pos = tail[i];
+
+                if ((snakeX == tail[i].x) && (snakeY == tail[i].y))
+                {
+                    snakeDX=0;
+                    snakeDY=0;
+                    isDead = true;
+                }
+            }
+        }
+
+        function drawFood()
+        {
+            ctx.beginPath();
+            ctx.rect(foodX,foodY,foodWidth,foodHeight);
+            ctx.fillStyle = "#b31c1c";
+            ctx.fill();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = "dimgray";
+            ctx.stroke();
+        }
+
+        document.getElementById("reset").addEventListener('click',function()
+        {
+            isDead=false;
+            ctx.clearRect(0,0,X,Y);
+            init();
+
+            drawFood();
+            drawSnake();
+
+            eatFood();
+            biteTail();
+        });
+
+        function theEnd()
+        {
+                var theEnd = setInterval(ecranFin,100);
+                var fond = 0;
+
+                function ecranFin()
+                {
+                    fond += scl;
+
+                    if (fond <= Y)
+                    {
+                        ctx.clearRect(0,0,X,Y);
+
+                        ctx.beginPath();
+                        ctx.fillStyle="dimgray";
+                        ctx.rect(0,0,X,fond);
+                        ctx.fill();
+                    }
+                    else
+                    {
+                        clearInterval(theEnd);
+                        
+                        var game = setInterval(drawGame,1);
+                        var deplacementGameY = -50;
+
+                        function drawGame()
+                        {
+                            if (deplacementGameY < 150)
+                            {
+                                ctx.clearRect(0,0,X,Y);
+                                ctx.beginPath();
+                                ctx.fillStyle="dimgray";
+                                ctx.rect(0,0,X,fond);
+                                ctx.fill();
+                                ctx.font = "50px Helvetica";
+                                ctx.fillStyle = "#e2cf22";
+                                ctx.fillText("GAME",120,deplacementGameY);
+
+                                deplacementGameY += 1;
+                            }
+                            else
+                            {
+                                clearInterval(game);
+
+                                var over = setInterval(drawOver, 1);
+                                var deplacementOverY = -50;
+
+                                function drawOver()
+                                {
+                                    if (deplacementOverY < 230)
+                                    {
+                                        ctx.clearRect(0,0,X,Y);
+
+                                        ctx.beginPath();
+                                        ctx.fillStyle="dimgray";
+                                        ctx.rect(0,0,X,fond);
+                                        ctx.fill();
+
+                                        ctx.font = "50px Helvetica";
+                                        ctx.fillStyle = "#e2cf22";
+                                        ctx.fillText("GAME",120,150);
+
+                                        ctx.font = "50px Helvetica";
+                                        ctx.fillStyle = "#e2cf22";
+                                        ctx.fillText("OVER",125,deplacementOverY);
+
+                                        deplacementOverY += 1;
+                                    }
+                                    else
+                                    {
+                                        clearInterval(over);
+
+                                        // var score = setInterval(drawScore,1);
+                                        // var deplacementScoreY = Y + 50;
+                                        
+
+                                        // function drawScore()
+                                        // {
+                                        //     if (deplacementScoreY > 320)
+                                        //     {
+                                        //         ctx.clearRect(0,0,X,Y);
+
+                                        //         ctx.beginPath();
+                                        //         ctx.fillStyle="dimgray";
+                                        //         ctx.rect(0,0,X,fond);
+                                        //         ctx.fill();
+
+                                        //         ctx.font = "50px Helvetica";
+                                        //         ctx.fillStyle = "#e2cf22";
+                                        //         ctx.fillText("GAME",120,150);
+
+                                        //         ctx.font = "50px Helvetica";
+                                        //         ctx.fillStyle = "#e2cf22";
+                                        //         ctx.fillText("OVER",125,230);
+
+                                        //         ctx.font = "30px Helvetica";
+                                        //         ctx.fillStyle = "";7
+                                        //         ctx.fillText("Score : " + points + " pomme(s)", 70 , deplacementScoreY);
+
+                                        //         deplacementScoreY -= 1;
+                                        //     }
+                                        //}
+                                    }
+                                }
+                            }
+                        }
+                        // //GameOver
+                        // ctx.fillStyle="whitesmoke";
+                        // ctx.rect(20,20,scl,4*scl);
+                        // ctx.fill();
+                    }
+                }
+        }
+    </script>
+
+<!--
+    <script src="snake.js"></script>
+    <script src="food.js"></script>
+    <script src="app.js"></script>
+-->
+</body>
+</html>
